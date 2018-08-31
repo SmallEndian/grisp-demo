@@ -17,6 +17,7 @@ start(_Type, _Args) ->
     grisp_led:flash(2, green, 700)],
     timer:sleep(2000),
     io:format("Random definition:~n"),
+    io:format(antidote:gpb_version_as_string()),
     Random = fun() ->
         {rand:uniform(2) - 1, rand:uniform(2) -1, rand:uniform(2) - 1}
     end,
