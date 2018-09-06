@@ -3,10 +3,6 @@
   {git,"https://github.com/SyncFree/antidote_pb",
        {ref,"65f72c5a239820d073d02c2137a77eb16e965def"}},
   0},
- {<<"antidote_pb_codec">>,
-  {git,"https://github.com/AntidoteDB/antidote_pb_codec",
-       {ref,"fdae22c21c2fb0753f82c7c2e3a01a5c1008d78e"}},
-  0},
  {<<"goldrush">>,
   {git,"git://github.com/DeadZen/goldrush.git",
        {ref,"212299233c7e7eb63a97be2777e1c05ebaa58dbe"}},
@@ -19,11 +15,7 @@
  {<<"mapz">>,{pkg,<<"mapz">>,<<"0.3.0">>},1},
  {<<"protobuffs">>,
   {git,"git://github.com/basho/erlang_protobuffs.git",
-       {ref,"0dde9d3b37b7bec3a4dfb0e87684dd7039e169ab"}},
-  2},
- {<<"riak_pb">>,
-  {git,"git://github.com/syncfree/riak_pb",
-       {ref,"322309b2bb69b38191a51b21247a71b5e412e656"}},
+       {ref,"f90e025518bdfbe48d6303c6aa5101297c56fb7b"}},
   1}]}.
 [
 {pkg_hash,[

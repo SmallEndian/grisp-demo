@@ -9,7 +9,7 @@
 -export([stop/1]).
 -export([launch_blue/0]).
 -export([list_files/1]).
--export([ls/1, all_mods/0, connect/0, con/0]).
+-export([ls/1, all_mods/0, connect/0, con/0, lww/0]).
 
 %--- Callbacks -----------------------------------------------------------------
 
@@ -18,7 +18,8 @@ start(_Type, _Args) ->
     [grisp_led:flash(1, aqua, 700),
     grisp_led:flash(2, green, 700)],
     %timer:sleep(2000),
-    io:format("GPB version: ~p ~n", [antidote:gpb_version_as_string()]),
+    % We don't use these anymore.
+    %io:format("GPB version: ~p ~n", [antidote:gpb_version_as_string()]),
     io:format("~n"),
     
     list_files("."),
@@ -49,7 +50,7 @@ list_files(Path) ->
 
 all_mods()-> [io:format("~p ~n", [E]) || {E, _} <-  code:all_loaded() ].
 
-con()-> {ok, Pid} = antidotec_pb_socket:start("localhost", 8087),
+con()-> {ok, Pid} = antidotec_pb_socket:start("192.168.43.81", 8087),
 
 	BObj = {"A", riak_dt_pncounter, "A"},
 
@@ -61,10 +62,11 @@ con()-> {ok, Pid} = antidotec_pb_socket:start("localhost", 8087),
 
 	.
 
+lww() -> ok.
 
 connect()->
 	{ok, Pid} = antidotec_pb_socket:start("localhost", 8087),
-	BObj = {"A", riak_dt_pncounter, "A"},
+	BObj = {"A",  antidote_crdt_counter, "B"},
 	{ok, TxId} = antidotec_pb:start_transaction(Pid, term_to_binary(ignore), []),
 	Obj = antidotec_counter:increment(1, antidotec_counter:new()),
 	ok = antidotec_pb:update_objects(Pid, antidotec_counter:to_ops(BObj, Obj), TxId),
