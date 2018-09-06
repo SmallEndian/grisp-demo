@@ -48,9 +48,11 @@ list_files(Path) ->
 	io:format("~n")
 	.
 
-all_mods()-> [io:format("~p ~n", [E]) || {E, _} <-  code:all_loaded() ].
+%all_mods()-> [io:format("~p ~n", [E]) || {E, _} <-  code:all_loaded() ].
+all_mods() -> lists:map( fun (X) -> io:format("~p ~n", [X]) end, 
+			  lists:sort([X || {X, _} <- code:all_loaded()])).
 
-con()-> {ok, Pid} = antidotec_pb_socket:start("192.168.43.81", 8087),
+connect()-> {ok, Pid} = antidotec_pb_socket:start({192,168,43,81}, 8087),
 
 	BObj = {"A", riak_dt_pncounter, "A"},
 
@@ -64,8 +66,8 @@ con()-> {ok, Pid} = antidotec_pb_socket:start("192.168.43.81", 8087),
 
 lww() -> ok.
 
-connect()->
-	{ok, Pid} = antidotec_pb_socket:start("localhost", 8087),
+con()->
+	{ok, Pid} = antidotec_pb_socket:start({192,168,43,81}, 8087),
 	BObj = {"A",  antidote_crdt_counter, "B"},
 	{ok, TxId} = antidotec_pb:start_transaction(Pid, term_to_binary(ignore), []),
 	Obj = antidotec_counter:increment(1, antidotec_counter:new()),
