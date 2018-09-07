@@ -9,7 +9,7 @@
 -export([stop/1]).
 -export([launch_blue/0]).
 -export([list_files/1]).
--export([ls/1, all_mods/0, connect/0, con/0, lww/0]).
+-export([ls/1, all_mods/0, connect/0, con/0, lww/0, flash_ok/0]).
 
 %--- Callbacks -----------------------------------------------------------------
 
@@ -28,14 +28,17 @@ start(_Type, _Args) ->
     list_files("robot/bin"),
     list_files("robot/releases"),
 
-    %application:ensure_all_started(antidote_pb),
+    application:ensure_all_started(antidote_pb_socket),
     %
     
     %io:format(anditote_pb_socket:start("127.0.0.1", "8080")),
     %antidote_pb:module_info(),
     %grisp_led:pattern(2, [{100, Red}]),
-    grisp_led:off(1),
-    grisp_led:off(2),
+    
+	con(),
+
+flash_ok(),
+    %grisp_led:off(1),
     {ok, Supervisor}.
 
 stop(_State) -> ok.
@@ -51,18 +54,11 @@ list_files(Path) ->
 %all_mods()-> [io:format("~p ~n", [E]) || {E, _} <-  code:all_loaded() ].
 all_mods() -> lists:map( fun (X) -> io:format("~p ~n", [X]) end, 
 			  lists:sort([X || {X, _} <- code:all_loaded()])).
+connect() -> ok.
 
-connect()-> {ok, Pid} = antidotec_pb_socket:start({192,168,43,81}, 8087),
-
-	BObj = {"A", riak_dt_pncounter, "A"},
-
-	{ok, TxId} = antidotec_pb:start_transaction(Pid, term_to_binary(ignore), []),
-
-	Obj = antidotec_counter:increment(1, antidotec_counter:new()),
-	{ok, TimeStamp} = antidotec_pb:commit_transaction(Pid, TxId),
-	antidotec_counter:to_ops(BObj, Obj)
-
-	.
+flash_ok() -> 
+	 grisp_led:pattern(1, [{700, red}, {100, off}, {700, green},  {100, off}, {700, blue}, {infinity, off}]),
+	 grisp_led:pattern(2, [{700, blue}, {100, off}, {700, green},  {100, off}, {700, red}, {infinity, off}]).
 
 lww() -> ok.
 
