@@ -44,6 +44,9 @@ start(_Type, _Args) ->
 
 	grisp:add_device(spi1, pmod_nav),
 
+	spawn(fun test/0),
+
+
 
 	flash_ok(),
 	%grisp_led:off(1),
@@ -86,16 +89,20 @@ launch_blue() ->
 	ok.
 
 test() ->
-	acl({0,0,0}, 5).
+	acl({0,0,0}, -1).
 
 acl(State, 0) -> ok;
 acl(State, N) ->
 	Tuple = case pmod_nav:read(acc, [out_x_xl,out_y_xl,out_z_xl]) of 
 			[A,B,C] -> {A,B,C}
 		end,
-	Adds = fun({A,B,C}) -> 
-	io:format("~p ~n", [Tuple]),
-	timer:sleep(1000),
+	Adds = fun({A,B,C}) -> abs(A+B+C) end,
+	%io:format("~p ~n", [Tuple]),
+	timer:sleep(250),
+	case Diff = (Adds(Tuple) - Adds(State)) > 0.5 of
+	     true -> io:format("Changed! ~p~n", [Diff]) ;
+	     false -> ok
+	end,
 	acl(Tuple, N-1)
 	.
 
