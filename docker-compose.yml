@@ -1,0 +1,6 @@
+version: '3'
+services:
+  antidotenode:
+          ports:
+                  - "8087:8087"
+          image: mweber/antidote:latest
