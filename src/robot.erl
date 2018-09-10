@@ -9,7 +9,7 @@
 -export([stop/1]).
 -export([launch_blue/0]).
 -export([list_files/1]).
--export([ls/1, all_mods/0, connect/0, con/0, lww/0, flash_ok/0]).
+-export([ls/1, all_mods/0, connect/0, con/0, lww/0, flash_ok/0, l/0]).
 
 %--- Callbacks -----------------------------------------------------------------
 
@@ -34,8 +34,14 @@ start(_Type, _Args) ->
     %io:format(anditote_pb_socket:start("127.0.0.1", "8080")),
     %antidote_pb:module_info(),
     %grisp_led:pattern(2, [{100, Red}]),
-    
-	con(),
+
+% When Antidote had been started
+
+    case not grisp_gpio:get(jumper_1) of
+	    true -> con();
+	    _ -> ok
+    end,
+
 
 flash_ok(),
     %grisp_led:off(1),
@@ -43,6 +49,7 @@ flash_ok(),
 
 stop(_State) -> ok.
 
+l() -> flash_ok().
 ls(E) -> list_files(E).
 list_files(Path) ->
 	{ok, Str} = file:list_dir(Path),

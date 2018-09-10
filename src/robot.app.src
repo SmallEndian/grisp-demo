@@ -9,7 +9,7 @@
 	antidote_pb,
         grisp
     ]},
-    {env,[]},
+    {env,[{devices, [{spi1, pmod_acl2}]}]},
     {modules, []},
 
     {maintainers, []},
