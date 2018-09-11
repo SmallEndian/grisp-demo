@@ -9,13 +9,13 @@
 -export([stop/1]).
 -export([launch_blue/0]).
 -export([list_files/1]).
--export([ls/1, all_mods/0, connect/0, con/0, lww/0, flash_ok/0, l/0, test/0]).
-
+-export([ls/1, all_mods/0,  flash_ok/0, l/0, test/0, gt/0, print/1]).
+-export([inc/0, dec/0]).
 %--- Callbacks -----------------------------------------------------------------
 
 start(_Type, _Args) ->
 	{ok, Supervisor} = robot_sup:start_link(),
-	[grisp_led:flash(1, aqua, 700),
+	_ = [grisp_led:flash(1, aqua, 700),
 	 grisp_led:flash(2, green, 700)],
 	%timer:sleep(2000),
 	% We don't use these anymore.
@@ -38,7 +38,9 @@ start(_Type, _Args) ->
 	% When Antidote had been started
 
 	case not grisp_gpio:get(jumper_1) of
-		true -> con();
+		true -> 
+			ok;
+			%con();
 		_ -> ok
 	end,
 
@@ -66,23 +68,46 @@ list_files(Path) ->
 %all_mods()-> [io:format("~p ~n", [E]) || {E, _} <-  code:all_loaded() ].
 all_mods() -> lists:map( fun (X) -> io:format("~p ~n", [X]) end, 
 			 lists:sort([X || {X, _} <- code:all_loaded()])).
-connect() -> ok.
 
 flash_ok() -> 
 	grisp_led:pattern(1, [{700, red}, {100, off}, {700, green},  {100, off}, {700, blue}, {infinity, off}]),
 	grisp_led:pattern(2, [{700, blue}, {100, off}, {700, green},  {100, off}, {700, red}, {infinity, off}]).
 
-lww() -> ok.
 
-con()->
+dec()->
+	{ok, Pid} = antidotec_pb_socket:start({192,168,43,81}, 8087),
+	BObj = {"A",  antidote_crdt_counter, "B"},
+	{ok, TxId} = antidotec_pb:start_transaction(Pid, term_to_binary(ignore), []),
+	Obj = antidotec_counter:decrement(1, antidotec_counter:new()),
+	ok = antidotec_pb:update_objects(Pid, antidotec_counter:to_ops(BObj, Obj), TxId),
+	{ok, _TimeStamp} = antidotec_pb:commit_transaction(Pid, TxId),
+	_Disconnected = antidotec_pb_socket:stop(Pid),
+	ok.
+
+
+inc()->
 	{ok, Pid} = antidotec_pb_socket:start({192,168,43,81}, 8087),
 	BObj = {"A",  antidote_crdt_counter, "B"},
 	{ok, TxId} = antidotec_pb:start_transaction(Pid, term_to_binary(ignore), []),
 	Obj = antidotec_counter:increment(1, antidotec_counter:new()),
 	ok = antidotec_pb:update_objects(Pid, antidotec_counter:to_ops(BObj, Obj), TxId),
-	{ok, TimeStamp} = antidotec_pb:commit_transaction(Pid, TxId),
+	{ok, _TimeStamp} = antidotec_pb:commit_transaction(Pid, TxId),
 	_Disconnected = antidotec_pb_socket:stop(Pid),
 	ok.
+
+gt() ->
+	{ok, Pid} = antidotec_pb_socket:start({192,168,43,81}, 8087),
+	BObj = {"A",  antidote_crdt_counter, "B"},
+	{ok, TxId} = antidotec_pb:start_transaction(Pid, term_to_binary(ignore), []),
+	{ok, Val} = antidotec_pb:read_objects(Pid, [BObj], TxId),
+	 {ok, _} = antidotec_pb:commit_transaction(Pid, TxId),
+	_Disconnected = antidotec_pb_socket:stop(Pid),
+	%io:format("value: ~p ~n", [antidotec_counter:value(hd(Val))]),
+	antidotec_counter:value(hd(Val))
+	.
+
+
+
 
 launch_blue() ->
 	grisp_led:flash(2, blue, 1000),
@@ -91,7 +116,7 @@ launch_blue() ->
 test() ->
 	acl({0,0,0}, -1).
 
-acl(State, 0) -> ok;
+acl(_State, 0) -> ok;
 acl(State, N) ->
 	Tuple = case pmod_nav:read(acc, [out_x_xl,out_y_xl,out_z_xl]) of 
 			[A,B,C] -> {A,B,C}
@@ -99,12 +124,44 @@ acl(State, N) ->
 	Adds = fun({A,B,C}) -> abs(A+B+C) end,
 	%io:format("~p ~n", [Tuple]),
 	timer:sleep(250),
-	case Diff = (Adds(Tuple) - Adds(State)) > 0.5 of
-	     true -> io:format("Changed! ~p~n", [Diff]) ;
-	     false -> ok
+	case (Diff = (Adds(Tuple) - Adds(State))) > 0.5 of
+	     true -> dec(),
+		     New_Val = gt(),
+			io:format("Changed! ~p : ~p ~n", [Diff, New_Val]),
+		     print(New_Val);
+		false -> ok
 	end,
 	acl(Tuple, N-1)
 	.
 
 
+print(Number) ->
+	Tens = trunc(Number/10),
+	Units = trunc(Number) rem 10,
+	Colors = fun L(0) -> [{infinity, off}];
+L(N) -> [{500, rainbow()}, {300, off}]++L(N-1)
+				end,
+				grisp_led:pattern(1, Colors(Tens)),
+				timer:sleep(Tens * 800),
+				grisp_led:pattern(2, Colors(Units)),
+				timer:sleep(Units * 800)
+				.
+
+%Flash = fun T(0, _) -> ok;
+%T(N, Led) -> 
+%grisp_led:pattern(Led, [{500, rainbow()},  {300, off}, {infinity, off}]),
+%timer:sleep(800),
+%T(N-1, Led)
+%end,
+	%Flash(Tens, 1),
+	%Flash(Units, 2).
+
+%% Constant values
+bobj() ->  {"A",  antidote_crdt_counter, "B"}.
+
+rainbow() ->
+	Colors = [ black , blue , green , aqua , red , magenta , yellow , white ],
+	Length = length(Colors),
+	lists:nth(rand:uniform(Length), Colors)
+	.
 
