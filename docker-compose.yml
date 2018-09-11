@@ -3,4 +3,8 @@ services:
   antidotenode:
           ports:
                   - "8087:8087"
+          image: mweber/antidote:latest  
+  antidotenode2:
+          ports:
+                  - "8088:8087"
           image: mweber/antidote:latest
