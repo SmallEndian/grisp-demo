@@ -13,6 +13,11 @@
 -export([inc/0, dec/0]).
 %--- Callbacks -----------------------------------------------------------------
 
+%% Constant values
+bobj() ->  {"A",  antidote_crdt_counter, "B"}.
+
+
+
 start(_Type, _Args) ->
 	{ok, Supervisor} = robot_sup:start_link(),
 	_ = [grisp_led:flash(1, aqua, 700),
@@ -47,6 +52,7 @@ start(_Type, _Args) ->
 	grisp:add_device(spi1, pmod_nav),
 
 	spawn(fun test/0),
+	register(printer, spawn(fun printer/0)),
 
 
 
@@ -86,7 +92,7 @@ dec()->
 
 
 inc()->
-	{ok, Pid} = antidotec_pb_socket:start({192,168,43,81}, 8087),
+	{ok, Pid} = antidotec_pb_socket:start({192,168,43,81}, 8088),
 	BObj = {"A",  antidote_crdt_counter, "B"},
 	{ok, TxId} = antidotec_pb:start_transaction(Pid, term_to_binary(ignore), []),
 	Obj = antidotec_counter:increment(1, antidotec_counter:new()),
@@ -104,6 +110,14 @@ gt() ->
 	_Disconnected = antidotec_pb_socket:stop(Pid),
 	%io:format("value: ~p ~n", [antidotec_counter:value(hd(Val))]),
 	antidotec_counter:value(hd(Val))
+	.
+
+printer() ->
+	receive 
+		N when is_integer(N) -> print(N);
+		_ -> ok
+	end,
+	printer()
 	.
 
 
@@ -125,10 +139,14 @@ acl(State, N) ->
 	%io:format("~p ~n", [Tuple]),
 	timer:sleep(250),
 	case (Diff = (Adds(Tuple) - Adds(State))) > 0.5 of
-	     true -> dec(),
+	     true -> 
+			case grisp_gpio:get(jumper1) of
+				true -> inc();
+				false ->dec() 
+			end,
 		     New_Val = gt(),
 			io:format("Changed! ~p : ~p ~n", [Diff, New_Val]),
-		     print(New_Val);
+			printer ! New_Val;
 		false -> ok
 	end,
 	acl(Tuple, N-1)
@@ -156,8 +174,6 @@ L(N) -> [{500, rainbow()}, {300, off}]++L(N-1)
 	%Flash(Tens, 1),
 	%Flash(Units, 2).
 
-%% Constant values
-bobj() ->  {"A",  antidote_crdt_counter, "B"}.
 
 rainbow() ->
 	Colors = [ black , blue , green , aqua , red , magenta , yellow , white ],
