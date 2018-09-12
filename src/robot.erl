@@ -49,8 +49,8 @@ start(_Type, _Args) ->
 	end,
 
 			case not grisp_gpio:get(jumper_1) of
-				true -> io:format("This is Minus");
-				false ->io:format("This is Plus") 
+				true -> io:format("This is Minus~n");
+				false -> io:format("This is Plus~n")
 			end,
 	grisp:add_device(spi1, pmod_nav),
 
@@ -110,7 +110,6 @@ gt() ->
 	{ok, Val} = antidotec_pb:read_objects(Pid, [BObj], TxId),
 	 {ok, _} = antidotec_pb:commit_transaction(Pid, TxId),
 	_Disconnected = antidotec_pb_socket:stop(Pid),
-	%io:format("value: ~p ~n", [antidotec_counter:value(hd(Val))]),
 	antidotec_counter:value(hd(Val))
 	.
 
