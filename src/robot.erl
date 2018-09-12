@@ -48,8 +48,8 @@ start(_Type, _Args) ->
 		_ -> ok
 	end,
 
-			case grisp_gpio:get(jumper_1) of
-				true -> io:format("This is Monus");
+			case not grisp_gpio:get(jumper_1) of
+				true -> io:format("This is Minus");
 				false ->io:format("This is Plus") 
 			end,
 	grisp:add_device(spi1, pmod_nav),
@@ -139,7 +139,7 @@ acl(State, N) ->
 	timer:sleep(250),
 	case (Diff = (Adds(Tuple) - Adds(State))) > 0.5 of
 	     true -> 
-			case grisp_gpio:get(jumper_1) of
+			case not grisp_gpio:get(jumper_1) of
 				true -> inc();
 				false ->dec()
 			end,
