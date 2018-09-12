@@ -7,7 +7,6 @@
 % Callbacks
 -export([start/2]).
 -export([stop/1]).
--export([launch_blue/0]).
 -export([list_files/1]).
 -export([ls/1, all_mods/0,  flash_ok/0, l/0, test/0, gt/0, print/1]).
 -export([inc/0, dec/0]).
@@ -49,6 +48,10 @@ start(_Type, _Args) ->
 		_ -> ok
 	end,
 
+			case grisp_gpio:get(jumper_1) of
+				true -> io:format("This is Monus");
+				false ->io:format("This is Plus") 
+			end,
 	grisp:add_device(spi1, pmod_nav),
 
 	spawn(fun test/0),
@@ -62,7 +65,8 @@ start(_Type, _Args) ->
 
 stop(_State) -> ok.
 
-l() -> flash_ok().
+
+%%%%% Debug Functions
 ls(E) -> list_files(E).
 list_files(Path) ->
 	{ok, Str} = file:list_dir(Path),
@@ -71,15 +75,13 @@ list_files(Path) ->
 	io:format("~n")
 	.
 
-%all_mods()-> [io:format("~p ~n", [E]) || {E, _} <-  code:all_loaded() ].
 all_mods() -> lists:map( fun (X) -> io:format("~p ~n", [X]) end, 
 			 lists:sort([X || {X, _} <- code:all_loaded()])).
 
-flash_ok() -> 
-	grisp_led:pattern(1, [{700, red}, {100, off}, {700, green},  {100, off}, {700, blue}, {infinity, off}]),
-	grisp_led:pattern(2, [{700, blue}, {100, off}, {700, green},  {100, off}, {700, red}, {infinity, off}]).
 
 
+
+%% Simple transactions on a counter
 dec()->
 	{ok, Pid} = antidotec_pb_socket:start({192,168,43,81}, 8087),
 	BObj = {"A",  antidote_crdt_counter, "B"},
@@ -123,13 +125,10 @@ printer() ->
 
 
 
-launch_blue() ->
-	grisp_led:flash(2, blue, 1000),
-	ok.
 
+%% Initiate the infinite event loop
 test() ->
 	acl({0,0,0}, -1).
-
 acl(_State, 0) -> ok;
 acl(State, N) ->
 	Tuple = case pmod_nav:read(acc, [out_x_xl,out_y_xl,out_z_xl]) of 
@@ -140,9 +139,9 @@ acl(State, N) ->
 	timer:sleep(250),
 	case (Diff = (Adds(Tuple) - Adds(State))) > 0.5 of
 	     true -> 
-			case grisp_gpio:get(jumper1) of
+			case grisp_gpio:get(jumper_1) of
 				true -> inc();
-				false ->dec() 
+				false ->dec()
 			end,
 		     New_Val = gt(),
 			io:format("Changed! ~p : ~p ~n", [Diff, New_Val]),
@@ -153,6 +152,7 @@ acl(State, N) ->
 	.
 
 
+%% Led output
 print(Number) ->
 	Tens = trunc(Number/10),
 	Units = trunc(Number) rem 10,
@@ -164,16 +164,10 @@ L(N) -> [{500, rainbow()}, {300, off}]++L(N-1)
 				grisp_led:pattern(2, Colors(Units)),
 				timer:sleep(Units * 800)
 				.
-
-%Flash = fun T(0, _) -> ok;
-%T(N, Led) -> 
-%grisp_led:pattern(Led, [{500, rainbow()},  {300, off}, {infinity, off}]),
-%timer:sleep(800),
-%T(N-1, Led)
-%end,
-	%Flash(Tens, 1),
-	%Flash(Units, 2).
-
+l() -> flash_ok().
+flash_ok() -> 
+	grisp_led:pattern(1, [{700, red}, {100, off}, {700, green},  {100, off}, {700, blue}, {infinity, off}]),
+	grisp_led:pattern(2, [{700, blue}, {100, off}, {700, green},  {100, off}, {700, red}, {infinity, off}]).
 
 rainbow() ->
 	Colors = [ black , blue , green , aqua , red , magenta , yellow , white ],
