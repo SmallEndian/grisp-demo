@@ -14,6 +14,12 @@
 
 %% Constant values
 bobj() ->  {"A",  antidote_crdt_counter, "B"}.
+ip() -> {192,168,43,77}.
+port() -> 
+			case not grisp_gpio:get(jumper_1) of
+				true -> 8088;
+				false -> 8087
+			end.
 
 
 
@@ -41,12 +47,6 @@ start(_Type, _Args) ->
 
 	% When Antidote had been started
 
-	case not grisp_gpio:get(jumper_1) of
-		true -> 
-			ok;
-			%con();
-		_ -> ok
-	end,
 
 			case not grisp_gpio:get(jumper_1) of
 				true -> io:format("This is Minus~n");
@@ -83,8 +83,8 @@ all_mods() -> lists:map( fun (X) -> io:format("~p ~n", [X]) end,
 
 %% Simple transactions on a counter
 dec()->
-	{ok, Pid} = antidotec_pb_socket:start({192,168,43,81}, 8087),
-	BObj = {"A",  antidote_crdt_counter, "B"},
+	{ok, Pid} = antidotec_pb_socket:start(ip(), port()),
+	BObj = bobj(),	
 	{ok, TxId} = antidotec_pb:start_transaction(Pid, term_to_binary(ignore), []),
 	Obj = antidotec_counter:decrement(1, antidotec_counter:new()),
 	ok = antidotec_pb:update_objects(Pid, antidotec_counter:to_ops(BObj, Obj), TxId),
@@ -94,8 +94,8 @@ dec()->
 
 
 inc()->
-	{ok, Pid} = antidotec_pb_socket:start({192,168,43,81}, 8088),
-	BObj = {"A",  antidote_crdt_counter, "B"},
+	{ok, Pid} = antidotec_pb_socket:start(ip(), port()),
+	BObj = bobj(),	
 	{ok, TxId} = antidotec_pb:start_transaction(Pid, term_to_binary(ignore), []),
 	Obj = antidotec_counter:increment(1, antidotec_counter:new()),
 	ok = antidotec_pb:update_objects(Pid, antidotec_counter:to_ops(BObj, Obj), TxId),
@@ -104,8 +104,8 @@ inc()->
 	ok.
 
 gt() ->
-	{ok, Pid} = antidotec_pb_socket:start({192,168,43,81}, 8087),
-	BObj = {"A",  antidote_crdt_counter, "B"},
+	{ok, Pid} = antidotec_pb_socket:start(ip(), port()),
+	BObj = bobj(),	
 	{ok, TxId} = antidotec_pb:start_transaction(Pid, term_to_binary(ignore), []),
 	{ok, Val} = antidotec_pb:read_objects(Pid, [BObj], TxId),
 	 {ok, _} = antidotec_pb:commit_transaction(Pid, TxId),
