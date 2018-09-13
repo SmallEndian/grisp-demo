@@ -114,6 +114,58 @@ gt() ->
 	antidotec_counter:value(hd(Val))
 	.
 
+%% We want to avoid call to gpio jumper
+inc_(Ip, Port) ->
+	{ok, Pid} = antidotec_pb_socket:start(Ip, Port),
+	BObj = bobj(),	
+	{ok, TxId} = antidotec_pb:start_transaction(Pid, term_to_binary(ignore), []),
+	{ok, Val} = antidotec_pb:read_objects(Pid, [BObj], TxId),
+	 {ok, _} = antidotec_pb:commit_transaction(Pid, TxId),
+	_Disconnected = antidotec_pb_socket:stop(Pid),
+	antidotec_counter:value(hd(Val))
+	.
+dec_(Ip, Port)->
+	{ok, Pid} = antidotec_pb_socket:start(Ip, Port),
+	BObj = bobj(),	
+	{ok, TxId} = antidotec_pb:start_transaction(Pid, term_to_binary(ignore), []),
+	Obj = antidotec_counter:decrement(1, antidotec_counter:new()),
+	ok = antidotec_pb:update_objects(Pid, antidotec_counter:to_ops(BObj, Obj), TxId),
+	{ok, _TimeStamp} = antidotec_pb:commit_transaction(Pid, TxId),
+	_Disconnected = antidotec_pb_socket:stop(Pid),
+	ok.
+
+gt_(Ip, Port) ->
+	{ok, Pid} = antidotec_pb_socket:start(Ip, Port),
+	BObj = bobj(),	
+	{ok, TxId} = antidotec_pb:start_transaction(Pid, term_to_binary(ignore), []),
+	{ok, Val} = antidotec_pb:read_objects(Pid, [BObj], TxId),
+	 {ok, _} = antidotec_pb:commit_transaction(Pid, TxId),
+	_Disconnected = antidotec_pb_socket:stop(Pid),
+	antidotec_counter:value(hd(Val))
+	.
+
+wait_thread() ->
+			case not grisp_gpio:get(jumper_1) of
+				true -> wait_thread(inc,ip(), port()) ;
+				false ->wait_thread(dec,ip(), port())
+			end.
+
+
+wait_thread(inc, Ip, Port) -> 
+	receive op -> inc_(Ip, Port),
+		      Val = gt_(Ip, Port),
+		      io:format("X++ ~p ~n", [Val]);
+		_ -> ok
+	end,
+	wait_thread(inc ,Ip, Port);
+wait_thread(dec, Ip, Port) ->
+	receive op -> dec_(Ip, Port),
+		      Val = gt_(Ip, Port),
+		      io:format("X-- ~p ~n", [Val]);
+		_ -> ok
+	end,
+	wait_thread(dec ,Ip, Port)
+	.
 
 
 
