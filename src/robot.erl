@@ -101,6 +101,7 @@ inc()->
 	ok = antidotec_pb:update_objects(Pid, antidotec_counter:to_ops(BObj, Obj), TxId),
 	{ok, _TimeStamp} = antidotec_pb:commit_transaction(Pid, TxId),
 	_Disconnected = antidotec_pb_socket:stop(Pid),
+	io:format("X++ "),
 	ok.
 
 gt() ->
@@ -113,9 +114,17 @@ gt() ->
 	antidotec_counter:value(hd(Val))
 	.
 
+
+
+
+
+
+
 printer() ->
 	receive 
-		N when is_integer(N) -> print(N);
+		N when is_integer(N) -> print(N),
+					flash(),
+					timer:sleep(200);
 		_ -> ok
 	end,
 	printer()
@@ -143,7 +152,8 @@ acl(State, N) ->
 				false ->dec()
 			end,
 		     New_Val = gt(),
-			io:format("Changed! ~p : ~p ~n", [Diff, New_Val]),
+			%io:format("Changed! ~p : ~p ~n", [Diff, New_Val]),
+		     io:format("~p ~n", [New_Val]),
 			printer ! New_Val;
 		false -> ok
 	end,
@@ -167,6 +177,9 @@ l() -> flash_ok().
 flash_ok() -> 
 	grisp_led:pattern(1, [{700, red}, {100, off}, {700, green},  {100, off}, {700, blue}, {infinity, off}]),
 	grisp_led:pattern(2, [{700, blue}, {100, off}, {700, green},  {100, off}, {700, red}, {infinity, off}]).
+flash() -> 
+	grisp_led:pattern(1, [{200, white}, {infinity, off}]),
+	grisp_led:pattern(2, [{200, white}, {infinity, off}]).
 
 rainbow() ->
 	Colors = [ black , blue , green , aqua , red , magenta , yellow , white ],
