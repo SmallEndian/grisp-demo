@@ -4,6 +4,8 @@
 
 -behavior(application).
 
+-compile([export_all]).
+
 % Callbacks
 -export([start/2]).
 -export([stop/1]).
@@ -49,11 +51,12 @@ start(_Type, _Args) ->
 
 
 			case not grisp_gpio:get(jumper_1) of
-				true -> io:format("This is Minus~n");
-				false -> io:format("This is Plus~n")
+				true -> io:format("This is Plus~n");
+				false -> io:format("This is Minus~n")
 			end,
 	grisp:add_device(spi1, pmod_nav),
 
+	register(client, spawn(fun wait_thread/0)),
 	spawn(fun test/0),
 	register(printer, spawn(fun printer/0)),
 
@@ -101,7 +104,6 @@ inc()->
 	ok = antidotec_pb:update_objects(Pid, antidotec_counter:to_ops(BObj, Obj), TxId),
 	{ok, _TimeStamp} = antidotec_pb:commit_transaction(Pid, TxId),
 	_Disconnected = antidotec_pb_socket:stop(Pid),
-	io:format("X++ "),
 	ok.
 
 gt() ->
@@ -119,10 +121,11 @@ inc_(Ip, Port) ->
 	{ok, Pid} = antidotec_pb_socket:start(Ip, Port),
 	BObj = bobj(),	
 	{ok, TxId} = antidotec_pb:start_transaction(Pid, term_to_binary(ignore), []),
-	{ok, Val} = antidotec_pb:read_objects(Pid, [BObj], TxId),
-	 {ok, _} = antidotec_pb:commit_transaction(Pid, TxId),
+	Obj = antidotec_counter:increment(1, antidotec_counter:new()),
+	ok = antidotec_pb:update_objects(Pid, antidotec_counter:to_ops(BObj, Obj), TxId),
+	{ok, _TimeStamp} = antidotec_pb:commit_transaction(Pid, TxId),
 	_Disconnected = antidotec_pb_socket:stop(Pid),
-	antidotec_counter:value(hd(Val))
+	ok
 	.
 dec_(Ip, Port)->
 	{ok, Pid} = antidotec_pb_socket:start(Ip, Port),
@@ -154,6 +157,7 @@ wait_thread() ->
 wait_thread(inc, Ip, Port) -> 
 	receive op -> inc_(Ip, Port),
 		      Val = gt_(Ip, Port),
+		      printer ! Val,
 		      io:format("X++ ~p ~n", [Val]);
 		_ -> ok
 	end,
@@ -161,6 +165,7 @@ wait_thread(inc, Ip, Port) ->
 wait_thread(dec, Ip, Port) ->
 	receive op -> dec_(Ip, Port),
 		      Val = gt_(Ip, Port),
+		      printer ! Val,
 		      io:format("X-- ~p ~n", [Val]);
 		_ -> ok
 	end,
@@ -199,14 +204,7 @@ acl(State, N) ->
 	timer:sleep(250),
 	case (Diff = (Adds(Tuple) - Adds(State))) > 0.5 of
 	     true -> 
-			case not grisp_gpio:get(jumper_1) of
-				true -> inc();
-				false ->dec()
-			end,
-		     New_Val = gt(),
-			%io:format("Changed! ~p : ~p ~n", [Diff, New_Val]),
-		     io:format("~p ~n", [New_Val]),
-			printer ! New_Val;
+			client ! op;
 		false -> ok
 	end,
 	acl(Tuple, N-1)
